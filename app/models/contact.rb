@@ -131,6 +131,17 @@ class Contact < ApplicationRecord
     )
   }
 
+  scope :order_on_custom_attribute, lambda { |key, display_type, direction|
+    qkey = connection.quote(key)
+    expr = case display_type.to_s
+           when 'number', 'currency', 'percent' then "NULLIF(\"contacts\".\"custom_attributes\"->>#{qkey}, '')::numeric"
+           when 'date' then "NULLIF(\"contacts\".\"custom_attributes\"->>#{qkey}, '')::timestamptz"
+           else "LOWER(\"contacts\".\"custom_attributes\"->>#{qkey})"
+           end
+    dir = direction.to_s.casecmp('desc').zero? ? 'DESC' : 'ASC'
+    order(Arel::Nodes::SqlLiteral.new("#{expr} #{dir} NULLS LAST"))
+  }
+
   # Find contacts that:
   # 1. Have no identification (email, phone_number, and identifier are NULL or empty string)
   # 2. Have no conversations

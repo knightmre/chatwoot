@@ -37,6 +37,8 @@ class FilterService
       lt_gt_filter_query(query_hash, current_index)
     when 'days_before'
       days_before_filter_query(query_hash, current_index)
+    when 'days_after'
+      days_after_filter_query(query_hash, current_index)
     else
       @filter_values["value_#{current_index}"] = filter_values(query_hash).to_s
       "= :value_#{current_index}"
@@ -98,10 +100,18 @@ class FilterService
   end
 
   def days_before_filter_query(query_hash, current_index)
+    relative_lt_gt_filter_query(query_hash, current_index, 'is_less_than')
+  end
+
+  def days_after_filter_query(query_hash, current_index)
+    relative_lt_gt_filter_query(query_hash, current_index, 'is_greater_than')
+  end
+
+  def relative_lt_gt_filter_query(query_hash, current_index, operator)
     date = Time.zone.today - query_hash['values'][0].to_i.days
-    updated_query_hash = query_hash.with_indifferent_access.merge(
+    updated_query_hash = query_hash.merge(
       values: [date.strftime],
-      filter_operator: 'is_less_than'
+      filter_operator: operator
     )
 
     lt_gt_filter_query(updated_query_hash, current_index)

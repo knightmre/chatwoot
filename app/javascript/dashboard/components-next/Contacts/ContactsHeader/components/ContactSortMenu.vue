@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useMapGetter } from 'dashboard/composables/store';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import SelectMenu from 'dashboard/components-next/selectmenu/SelectMenu.vue';
@@ -18,11 +19,15 @@ const props = defineProps({
 
 const emit = defineEmits(['update:sort']);
 
+const SORTABLE_CUSTOM_ATTRIBUTE_TYPES = ['text', 'number', 'date'];
+
 const { t } = useI18n();
+
+const contactAttributes = useMapGetter('attributes/getContactAttributes');
 
 const isMenuOpen = ref(false);
 
-const sortMenus = [
+const standardSortMenus = [
   {
     label: t('CONTACTS_LAYOUT.HEADER.ACTIONS.SORT_BY.OPTIONS.NAME'),
     value: 'name',
@@ -53,6 +58,23 @@ const sortMenus = [
   },
 ];
 
+const customAttributeSortMenus = computed(() =>
+  (contactAttributes.value || [])
+    .filter(attr =>
+      SORTABLE_CUSTOM_ATTRIBUTE_TYPES.includes(attr.attributeDisplayType)
+    )
+    .map(attr => ({
+      label: attr.attributeDisplayName,
+      value: `custom_attribute_${attr.attributeKey}`,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+);
+
+const sortMenus = computed(() => [
+  ...standardSortMenus,
+  ...customAttributeSortMenus.value,
+]);
+
 const orderingMenus = [
   {
     label: t('CONTACTS_LAYOUT.HEADER.ACTIONS.ORDER.OPTIONS.ASCENDING'),
@@ -70,7 +92,9 @@ const activeSort = toRef(props, 'activeSort');
 const activeOrdering = toRef(props, 'activeOrdering');
 
 const activeSortLabel = computed(() => {
-  const selectedMenu = sortMenus.find(menu => menu.value === activeSort.value);
+  const selectedMenu = sortMenus.value.find(
+    menu => menu.value === activeSort.value
+  );
   return (
     selectedMenu?.label || t('CONTACTS_LAYOUT.HEADER.ACTIONS.SORT_BY.LABEL')
   );

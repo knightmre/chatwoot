@@ -28,15 +28,12 @@ class Api::V1::Accounts::CustomFiltersController < Api::V1::Accounts::BaseContro
 
   def fetch_custom_filters
     @custom_filters = Current.account.custom_filters.where(
-      user: Current.user,
       filter_type: permitted_params[:filter_type] || DEFAULT_FILTER_TYPE
     )
   end
 
   def fetch_custom_filter
-    @custom_filter = Current.account.custom_filters.where(
-      user: Current.user
-    ).find(permitted_params[:id])
+    @custom_filter = Current.account.custom_filters.find(permitted_params[:id])
   end
 
   def permitted_payload

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useRouter } from 'vue-router';
 import { useAlert, useTrack } from 'dashboard/composables';
+import { usePolicy } from 'dashboard/composables/usePolicy';
 import { CONTACTS_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 import filterQueryGenerator from 'dashboard/helper/filterQueryGenerator';
 import contactFilterItems from 'dashboard/routes/dashboard/contacts/contactFilterItems';
@@ -49,6 +50,8 @@ const emit = defineEmits([
 const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
+const { checkPermissions } = usePolicy();
+const isAdministrator = computed(() => checkPermissions(['administrator']));
 
 const createNewContactDialogRef = ref(null);
 const contactExportDialogRef = ref(null);
@@ -281,6 +284,7 @@ defineExpose({
     :is-label-view="isLabelView"
     :is-active-view="isActiveView"
     :has-active-filters="hasAppliedFilters"
+    :can-delete-segment="isAdministrator"
     :button-label="t('CONTACTS_LAYOUT.HEADER.MESSAGE_BUTTON')"
     @search="emit('search', $event)"
     @update:sort="emit('update:sort', $event)"

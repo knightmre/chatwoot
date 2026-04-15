@@ -24,17 +24,19 @@ module Filters::CustomAttributeFilterHelper
     query_operator = query_hash[:query_operator]
     table_name = attribute_model == 'conversation_attribute' ? 'conversations' : 'contacts'
 
-    query = if attribute_data_type == 'text'
-              ActiveRecord::Base.sanitize_sql_array(
-                ["LOWER(#{table_name}.custom_attributes ->> ?)::#{attribute_data_type} #{filter_operator_value} #{query_operator} ", @attribute_key]
-              )
-            else
-              ActiveRecord::Base.sanitize_sql_array(
-                ["(#{table_name}.custom_attributes ->> ?)::#{attribute_data_type} #{filter_operator_value} #{query_operator} ", @attribute_key]
-              )
-            end
+    condition = if attribute_data_type == 'text'
+                  ActiveRecord::Base.sanitize_sql_array(
+                    ["LOWER(#{table_name}.custom_attributes ->> ?)::#{attribute_data_type} #{filter_operator_value}", @attribute_key]
+                  )
+                else
+                  ActiveRecord::Base.sanitize_sql_array(
+                    ["(#{table_name}.custom_attributes ->> ?)::#{attribute_data_type} #{filter_operator_value}", @attribute_key]
+                  )
+                end
 
-    query + not_in_custom_attr_query(table_name, query_hash, attribute_data_type)
+    condition += not_in_custom_attr_query(table_name, query_hash, attribute_data_type)
+    condition = "(#{condition})" if query_hash[:filter_operator] == 'not_equal_to'
+    "#{condition} #{query_operator}"
   end
 
   def custom_attribute(attribute_key, account, custom_attribute_type)
@@ -49,7 +51,7 @@ module Filters::CustomAttributeFilterHelper
     return '' unless query_hash[:filter_operator] == 'not_equal_to'
 
     ActiveRecord::Base.sanitize_sql_array(
-      [" OR (#{table_name}.custom_attributes ->> ?)::#{attribute_data_type} IS NULL ", @attribute_key]
+      [" OR (#{table_name}.custom_attributes ->> ?)::#{attribute_data_type} IS NULL", @attribute_key]
     )
   end
 end
