@@ -34,6 +34,7 @@ export const FILTER_OPS = {
   IS_GREATER_THAN: 'is_greater_than',
   IS_LESS_THAN: 'is_less_than',
   DAYS_BEFORE: 'days_before',
+  DAYS_AFTER: 'days_after',
   STARTS_WITH: 'starts_with',
   DETECTS: 'detects',
   DOES_NOT_DETECT: 'does_not_detect',
@@ -43,6 +44,7 @@ const NO_INPUT_OPTS = [FILTER_OPS.IS_PRESENT, FILTER_OPS.IS_NOT_PRESENT];
 
 const OPS_INPUT_OVERRIDE = {
   [FILTER_OPS.DAYS_BEFORE]: 'plainText',
+  [FILTER_OPS.DAYS_AFTER]: 'plainText',
 };
 
 /**
@@ -58,6 +60,7 @@ const filterOperatorIcon = {
   [FILTER_OPS.IS_GREATER_THAN]: 'i-ph-greater-than-bold',
   [FILTER_OPS.IS_LESS_THAN]: 'i-ph-less-than-bold',
   [FILTER_OPS.DAYS_BEFORE]: 'i-ph-calendar-minus-bold',
+  [FILTER_OPS.DAYS_AFTER]: 'i-ph-calendar-plus-bold',
   [FILTER_OPS.STARTS_WITH]: 'i-ph-caret-line-right-bold',
   [FILTER_OPS.DETECTS]: 'i-ph-sparkle-bold',
   [FILTER_OPS.DOES_NOT_DETECT]: 'i-ph-prohibit-bold',
@@ -130,6 +133,7 @@ export function useOperators() {
     operators.value[FILTER_OPS.IS_GREATER_THAN],
     operators.value[FILTER_OPS.IS_LESS_THAN],
     operators.value[FILTER_OPS.DAYS_BEFORE],
+    operators.value[FILTER_OPS.DAYS_AFTER],
   ]);
 
   /**
@@ -144,11 +148,11 @@ export function useOperators() {
       case 'text':
         return containmentOperators.value;
       case 'number':
-        return equalityOperators.value;
+        return comparisonOperators.value;
       case 'link':
         return equalityOperators.value;
       case 'date':
-        return comparisonOperators.value;
+        return dateOperators.value;
       case 'checkbox':
         return equalityOperators.value;
       default:

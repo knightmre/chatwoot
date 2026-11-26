@@ -228,6 +228,51 @@ const compareDates = (conversationValue, filterValue, compareFn) => {
   return compareFn(conversationDate, filterDate);
 };
 
+const toFiniteNumber = value => {
+  const isNumberLike =
+    typeof value === 'number' ||
+    (typeof value === 'string' && value.trim() !== '');
+  const number = isNumberLike ? Number(value) : NaN;
+  return Number.isFinite(number) ? number : null;
+};
+
+/**
+ * Compares a conversation value against a filter value: as numbers for number
+ * custom attributes, as dates otherwise, like the backend casts
+ * @param {Object} filter - The filter condition
+ * @param {*} conversationValue - The conversation value to compare
+ * @param {*} filterValue - The filter value to compare against
+ * @param {Function} compareFn - The comparison function to apply
+ * @returns {Boolean} - Returns true if the comparison succeeds, false otherwise
+ */
+const compareNumbersOrDates = (
+  filter,
+  conversationValue,
+  filterValue,
+  compareFn
+) => {
+  const conversationNumber = toFiniteNumber(conversationValue);
+  const filterNumber = toFiniteNumber(
+    Array.isArray(filterValue) ? filterValue[0] : filterValue
+  );
+
+  if (
+    !TIMESTAMP_ATTRIBUTES.includes(filter.attribute_key) &&
+    conversationNumber !== null &&
+    filterNumber !== null
+  ) {
+    return compareFn(conversationNumber, filterNumber);
+  }
+
+  return compareDates(conversationValue, filterValue, compareFn);
+};
+
+// A relative number of days as the backend accepts it: a whole number from 1 to 998.
+const toRelativeDays = value => {
+  const days = Number(Array.isArray(value) ? value[0] : value);
+  return Number.isInteger(days) && days >= 1 && days <= 998 ? days : null;
+};
+
 const dateStringWithOffset = (dateString, days) => {
   const date = new Date(`${dateString}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + days);
@@ -265,6 +310,7 @@ const prepareTimestampFilter = filter => {
   }
 
   const value = Array.isArray(filter.values) ? filter.values[0] : filter.values;
+  const relativeDays = toRelativeDays(value);
   let boundaryDate;
   let comparison;
 
@@ -277,12 +323,19 @@ const prepareTimestampFilter = filter => {
   ) {
     boundaryDate = dateStringWithOffset(value, 1);
     comparison = (timestamp, boundary) => timestamp >= boundary;
-  } else if (filter.filter_operator === 'days_before') {
+  } else if (filter.filter_operator === 'days_before' && relativeDays) {
     boundaryDate = dateStringWithOffset(
       currentDateInTimezone(filter.timezone),
-      -Number(value)
+      -relativeDays
     );
     comparison = (timestamp, boundary) => timestamp < boundary;
+  } else if (filter.filter_operator === 'days_after' && relativeDays) {
+    // Within the last x days: from the local midnight that starts day (today - x + 1).
+    boundaryDate = dateStringWithOffset(
+      currentDateInTimezone(filter.timezone),
+      1 - relativeDays
+    );
+    comparison = (timestamp, boundary) => timestamp >= boundary;
   } else {
     return filter;
   }
@@ -346,20 +399,35 @@ const matchesCondition = (conversationValue, filter) => {
       return isAbsent;
 
     case 'is_greater_than':
-      return compareDates(conversationValue, filterValue, (a, b) => a > b);
+      return compareNumbersOrDates(
+        filter,
+        conversationValue,
+        filterValue,
+        (a, b) => a > b
+      );
 
     case 'is_less_than':
-      return compareDates(conversationValue, filterValue, (a, b) => a < b);
+      return compareNumbersOrDates(
+        filter,
+        conversationValue,
+        filterValue,
+        (a, b) => a < b
+      );
 
-    case 'days_before': {
-      if (isNullish) {
+    case 'days_before':
+    case 'days_after': {
+      // Without a timezone the backend compares whole UTC days against
+      // (today - x days): before it for days_before, after it for days_after.
+      const days = toRelativeDays(filterValue);
+      if (days === null) {
         return false;
       }
 
-      const today = new Date();
-      const daysInMilliseconds = filterValue * 24 * 60 * 60 * 1000;
-      const targetDate = new Date(today.getTime() - daysInMilliseconds);
-      return conversationValue < targetDate.getTime();
+      return compareDates(
+        conversationValue,
+        dateStringWithOffset(new Date().toISOString().slice(0, 10), -days),
+        filterOperator === 'days_before' ? (a, b) => a < b : (a, b) => a > b
+      );
     }
 
     default:

@@ -122,6 +122,28 @@ class Contact < ApplicationRecord
     )
   }
 
+  # Values that are not a number or an ISO date sort last instead of failing the cast.
+  scope :order_on_custom_attribute, lambda { |key, display_type, direction|
+    value = "\"contacts\".\"custom_attributes\"->>#{connection.quote(key)}"
+    expr = case display_type.to_s
+           when 'number', 'currency', 'percent' then "CASE WHEN #{value} ~ '^-?[0-9]+([.][0-9]+)?$' THEN (#{value})::numeric END"
+           when 'date' then "(CASE WHEN #{value} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN #{value} END) COLLATE \"C\""
+           else "LOWER(#{value})"
+           end
+    dir = direction.to_s.casecmp('desc').zero? ? 'DESC' : 'ASC'
+    order(Arel::Nodes::SqlLiteral.new("#{expr} #{dir} NULLS LAST, \"contacts\".\"id\" ASC"))
+  }
+
+  # sort is "custom_attribute_<key>", prefixed with "-" for descending.
+  # Returns nil when it is not one, or names no contact attribute of the account.
+  def self.order_on_custom_attribute_sort(sort, account)
+    match = sort.to_s.match(/\A(?<direction>-?)custom_attribute_(?<key>.+)\z/)
+    definition = match && account.custom_attribute_definitions.contact_attribute.find_by(attribute_key: match[:key])
+    return unless definition
+
+    order_on_custom_attribute(definition.attribute_key, definition.attribute_display_type, match[:direction] == '-' ? 'desc' : 'asc')
+  end
+
   # Find contacts that:
   # 1. Have no identification (email, phone_number, and identifier are NULL or empty string)
   # 2. Have no conversations

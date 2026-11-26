@@ -55,11 +55,11 @@ export const validateSingleFilter = filter => {
     return VALUE_REQUIRED;
   }
 
-  if (
-    filter.filter_operator === 'days_before' &&
-    (parseInt(filter.values, 10) <= 0 || parseInt(filter.values, 10) >= 999)
-  ) {
-    return VALUE_MUST_BE_BETWEEN_1_AND_998;
+  if (['days_before', 'days_after'].includes(filter.filter_operator)) {
+    const days = String(filter.values).trim();
+    if (!/^\d+$/.test(days) || Number(days) <= 0 || Number(days) >= 999) {
+      return VALUE_MUST_BE_BETWEEN_1_AND_998;
+    }
   }
 
   return null;

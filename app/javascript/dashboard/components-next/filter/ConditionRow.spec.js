@@ -56,7 +56,14 @@ describe('ConditionRow', () => {
 
       const operatorPicker = wrapper.findAllComponents(FilterSelect)[1];
       expect(operatorPicker.props('options').map(({ value }) => value)).toEqual(
-        ['equal_to', 'not_equal_to']
+        [
+          'equal_to',
+          'not_equal_to',
+          'is_present',
+          'is_not_present',
+          'is_greater_than',
+          'is_less_than',
+        ]
       );
       expect(wrapper.vm.validate()).toBe(false);
       await wrapper.vm.$nextTick();

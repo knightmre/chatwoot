@@ -52,6 +52,7 @@ const store = useStore();
 const router = useRouter();
 const route = useRoute();
 const accountId = useMapGetter('getCurrentAccountId');
+const isAdministrator = computed(() => checkPermissions(['administrator']));
 
 const createNewContactDialogRef = ref(null);
 const createSegmentDialogRef = ref(null);
@@ -302,6 +303,7 @@ usePageCommands(() => [
     :is-label-view="isLabelView"
     :is-active-view="isActiveView"
     :has-active-filters="hasAppliedFilters"
+    :can-delete-segment="isAdministrator"
     :button-label="t('CONTACTS_LAYOUT.HEADER.MESSAGE_BUTTON')"
     @search="emit('search', $event)"
     @update:sort="emit('update:sort', $event)"

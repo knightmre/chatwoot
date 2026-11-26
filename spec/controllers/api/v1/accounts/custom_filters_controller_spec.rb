@@ -199,12 +199,24 @@ RSpec.describe 'Custom Filters API', type: :request do
     end
 
     context 'when it is an authenticated admin user' do
-      it 'deletes custom filter if it is attached to the current user and account' do
+      let(:admin) { create(:user, account: account, role: :administrator) }
+
+      it 'deletes a custom filter of the account, whoever created it' do
         delete "/api/v1/accounts/#{account.id}/custom_filters/#{custom_filter.id}",
-               headers: user.create_new_auth_token,
+               headers: admin.create_new_auth_token,
                as: :json
         expect(response).to have_http_status(:no_content)
         expect(user.custom_filters.count).to be 0
+      end
+    end
+
+    context 'when it is an authenticated agent' do
+      it 'returns unauthorized' do
+        delete "/api/v1/accounts/#{account.id}/custom_filters/#{custom_filter.id}",
+               headers: user.create_new_auth_token,
+               as: :json
+        expect(response).to have_http_status(:unauthorized)
+        expect(user.custom_filters.count).to be 1
       end
     end
   end

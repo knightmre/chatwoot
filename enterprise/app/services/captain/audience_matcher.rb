@@ -7,7 +7,7 @@ class Captain::AudienceMatcher
   CONTACT_ADDITIONAL = %w[country_code city company_name].freeze
   CONVERSATION_ADDITIONAL = %w[browser_language].freeze
   OPERATORS = %w[equal_to not_equal_to contains does_not_contain is_present is_not_present starts_with
-                 is_greater_than is_less_than days_before].freeze
+                 is_greater_than is_less_than days_before days_after].freeze
   # Root group -> sub-group -> leaves.
   MAX_DEPTH = 3
 
@@ -49,7 +49,7 @@ class Captain::AudienceMatcher
     when 'is_not_present' then actual.blank?
     when 'equal_to'       then values.any? { |expected| value_equal?(key, actual, expected) }
     when 'not_equal_to'   then negative_equality_match?(key, actual, values)
-    else matches_text_or_range?(leaf[:filter_operator], actual, values.first)
+    else matches_text_or_range?(key, leaf[:filter_operator], actual, values.first)
     end
   end
 
@@ -125,14 +125,14 @@ class Captain::AudienceMatcher
     value.is_a?(String) ? value.downcase : value
   end
 
-  def matches_text_or_range?(operator, actual, expected)
+  def matches_text_or_range?(key, operator, actual, expected)
     case operator
     when 'contains'         then actual.to_s.downcase.include?(expected.to_s.downcase)
     when 'does_not_contain' then excludes_text?(actual, expected)
     when 'starts_with'      then actual.to_s.downcase.start_with?(expected.to_s.downcase)
-    when 'is_greater_than'  then compare(actual, expected) == 1
-    when 'is_less_than'     then compare(actual, expected) == -1
-    when 'days_before'      then older_than_days?(actual, expected)
+    when 'is_greater_than'  then compare(key, actual, expected) == 1
+    when 'is_less_than'     then compare(key, actual, expected) == -1
+    when 'days_before', 'days_after' then relative_days_match?(operator, actual, expected)
     else false
     end
   end
@@ -142,19 +142,27 @@ class Captain::AudienceMatcher
   end
 
   # -1/0/1 like <=>, or nil when blank or unparseable (never matches).
-  def compare(actual, expected)
+  def compare(key, actual, expected)
     return nil if actual.blank?
 
+    numeric_attribute?(key) ? compare_numbers(actual, expected) : compare_dates_or_numbers(actual, expected)
+  rescue ArgumentError, TypeError
+    nil
+  end
+
+  def compare_numbers(actual, expected)
+    BigDecimal(actual.to_s) <=> BigDecimal(expected.to_s)
+  end
+
+  def compare_dates_or_numbers(actual, expected)
     actual = Time.zone.parse(actual) if iso_date_string?(actual)
 
     if actual.is_a?(Date) || actual.acts_like?(:time)
       expected_date = to_date(expected)
       actual.to_date <=> expected_date if expected_date
     else
-      BigDecimal(actual.to_s) <=> BigDecimal(expected.to_s)
+      compare_numbers(actual, expected)
     end
-  rescue ArgumentError, TypeError
-    nil
   end
 
   # Custom date attributes store ISO strings in jsonb; treat them as dates the way
@@ -165,9 +173,13 @@ class Captain::AudienceMatcher
     false
   end
 
-  def older_than_days?(actual, days)
+  # days_before: older than x days. days_after: within the last x days.
+  def relative_days_match?(operator, actual, days)
     date = to_date(actual)
-    date.present? && date < Time.zone.today - days.to_i.days
+    return false if date.blank?
+
+    threshold = Time.zone.today - days.to_i.days
+    operator == 'days_before' ? date < threshold : date > threshold
   end
 
   def to_date(value)

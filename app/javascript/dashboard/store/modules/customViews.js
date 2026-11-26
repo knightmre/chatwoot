@@ -86,7 +86,11 @@ export const getters = {
     return _state[VIEW_TYPES.CONVERSATION].records;
   },
   getContactCustomViews(_state) {
-    return _state[VIEW_TYPES.CONTACT].records;
+    return [..._state[VIEW_TYPES.CONTACT].records].sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '', undefined, {
+        sensitivity: 'base',
+      })
+    );
   },
   getActiveConversationFolder(_state) {
     return _state.activeConversationFolder;

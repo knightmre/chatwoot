@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { usePolicy } from 'dashboard/composables/usePolicy';
 import { formatNumber } from '@chatwoot/utils';
 import wootConstants from 'dashboard/constants/globals';
 
@@ -28,6 +29,8 @@ const emit = defineEmits([
 ]);
 
 const { uiSettings, updateUISettings } = useUISettings();
+const { checkPermissions } = usePolicy();
+const canDeleteFolder = computed(() => checkPermissions(['administrator']));
 
 const onBasicFilterChange = (value, type) => {
   emit('basicFilterChange', value, type);
@@ -144,6 +147,7 @@ const toggleConversationLayout = () => {
           />
         </div>
         <NextButton
+          v-if="canDeleteFolder"
           id="toggleConversationFilterButton"
           v-tooltip.top-end="$t('FILTER.CUSTOM_VIEWS.DELETE.DELETE_BUTTON')"
           icon="i-lucide-trash-2"

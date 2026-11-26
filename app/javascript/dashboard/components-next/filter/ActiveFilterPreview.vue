@@ -29,6 +29,7 @@ const formatOperatorLabel = operator => {
     is_greater_than: 'is greater than',
     is_less_than: 'is less than',
     days_before: 'days before',
+    days_after: 'within last x days',
   };
   return operators[operator] || replaceUnderscoreWithSpace(operator);
 };

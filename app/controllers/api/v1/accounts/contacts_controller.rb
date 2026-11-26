@@ -140,7 +140,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     includes_hash = { avatar_attachment: [:blob] }
     includes_hash[:contact_inboxes] = { inbox: :channel } if @include_contact_inboxes
 
-    filtrate(contacts)
+    sorted_contacts(contacts)
       .includes(includes_hash)
       .page(@current_page)
       .per(RESULTS_PER_PAGE)
@@ -152,7 +152,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
     # Calculate offset manually to fetch one extra record for has_more check
     offset = (@current_page.to_i - 1) * RESULTS_PER_PAGE
-    results = filtrate(contacts)
+    results = sorted_contacts(contacts)
               .includes(includes_hash)
               .offset(offset)
               .limit(RESULTS_PER_PAGE + 1)
@@ -162,6 +162,10 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     results = results.first(RESULTS_PER_PAGE) if @has_more
     @contacts_count = results.size
     results
+  end
+
+  def sorted_contacts(contacts)
+    contacts.order_on_custom_attribute_sort(params[:sort], Current.account) || filtrate(contacts)
   end
 
   def build_contact_inbox

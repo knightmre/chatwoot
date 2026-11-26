@@ -3,7 +3,7 @@ class Captain::AudienceValidator < ActiveModel::Validator
   VALUELESS_OPERATORS = %w[is_present is_not_present].freeze
   EQUALITY_OPERATORS = %w[equal_to not_equal_to].freeze
   CONTAINMENT_OPERATORS = %w[equal_to not_equal_to contains does_not_contain].freeze
-  DATE_OPERATORS = %w[is_greater_than is_less_than days_before].freeze
+  DATE_OPERATORS = %w[is_greater_than is_less_than days_before days_after].freeze
   COMPARISON_OPERATORS = %w[equal_to not_equal_to is_present is_not_present is_greater_than is_less_than].freeze
 
   STANDARD_ATTRIBUTE_OPERATORS = {
@@ -24,11 +24,11 @@ class Captain::AudienceValidator < ActiveModel::Validator
 
   CUSTOM_ATTRIBUTE_OPERATORS = {
     'text' => CONTAINMENT_OPERATORS,
-    'number' => EQUALITY_OPERATORS,
+    'number' => COMPARISON_OPERATORS,
     'currency' => EQUALITY_OPERATORS,
     'percent' => EQUALITY_OPERATORS,
     'link' => EQUALITY_OPERATORS,
-    'date' => COMPARISON_OPERATORS,
+    'date' => COMPARISON_OPERATORS | DATE_OPERATORS,
     'list' => EQUALITY_OPERATORS,
     'checkbox' => EQUALITY_OPERATORS
   }.freeze

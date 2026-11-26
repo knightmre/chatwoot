@@ -1,5 +1,8 @@
 module Filters::DateFilterHelper
   TIMESTAMP_ATTRIBUTES = %w[created_at last_activity_at].freeze
+  # Operators whose value is a number of days counted back from today, and the date comparison each one stands for:
+  # days_before is older than x days, days_after is within the last x days.
+  RELATIVE_DAYS_OPERATORS = { 'days_before' => 'is_less_than', 'days_after' => 'is_greater_than' }.freeze
 
   def date_filter(current_filter, query_hash, filter_operator_value)
     column = "#{filter_config[:table_name]}.#{query_hash[:attribute_key]}"
@@ -37,7 +40,7 @@ module Filters::DateFilterHelper
     "#{operator} :value_#{current_index}"
   end
 
-  def days_before_filter_query(query_hash, current_index)
+  def relative_days_filter_query(query_hash, current_index)
     days = Integer(query_hash['values'][0].to_s, 10, exception: false)
     raise CustomExceptions::CustomFilter::InvalidValue.new(attribute_name: query_hash['attribute_key']) unless days&.between?(1, 998)
 
@@ -45,7 +48,7 @@ module Filters::DateFilterHelper
     date = timezone.today - days.days
     updated_query_hash = query_hash.to_h.with_indifferent_access.merge(
       values: [date.strftime],
-      filter_operator: 'is_less_than'
+      filter_operator: RELATIVE_DAYS_OPERATORS.fetch(query_hash[:filter_operator])
     )
 
     lt_gt_filter_query(updated_query_hash, current_index)

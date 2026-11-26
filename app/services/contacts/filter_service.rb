@@ -19,13 +19,15 @@ class Contacts::FilterService < FilterService
   end
 
   def filter_values(query_hash)
-    current_val = query_hash['values'][0]
-    if query_hash['attribute_key'] == 'phone_number'
-      "+#{current_val&.delete('+')}"
-    elsif query_hash['attribute_key'] == 'country_code'
-      current_val.downcase
-    else
-      current_val.is_a?(String) ? current_val.downcase : current_val
+    Array(query_hash['values']).map do |value|
+      case query_hash['attribute_key']
+      when 'phone_number'
+        "+#{value&.delete('+')}"
+      when 'country_code'
+        value.downcase
+      else
+        value.is_a?(String) ? value.downcase : value
+      end
     end
   end
 
@@ -38,13 +40,5 @@ class Contacts::FilterService < FilterService
       entity: 'Contact',
       table_name: 'contacts'
     }
-  end
-
-  private
-
-  def equals_to_filter_string(filter_operator, current_index)
-    return "= :value_#{current_index}" if filter_operator == 'equal_to'
-
-    "!= :value_#{current_index}"
   end
 end

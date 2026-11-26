@@ -37,8 +37,8 @@ class FilterService
       @filter_values["value_#{current_index}"] = 'IS NULL'
     when 'is_greater_than', 'is_less_than'
       lt_gt_filter_query(query_hash, current_index)
-    when 'days_before'
-      days_before_filter_query(query_hash, current_index)
+    when 'days_before', 'days_after'
+      relative_days_filter_query(query_hash, current_index)
     else
       @filter_values["value_#{current_index}"] = filter_values(query_hash).to_s
       "= :value_#{current_index}"

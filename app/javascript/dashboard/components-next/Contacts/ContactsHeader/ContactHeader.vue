@@ -17,6 +17,7 @@ defineProps({
   hasActiveFilters: { type: Boolean, default: false },
   isLabelView: { type: Boolean, default: false },
   isActiveView: { type: Boolean, default: false },
+  canDeleteSegment: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -94,7 +95,12 @@ const emit = defineEmits([
               @click="emit('createSegment')"
             />
             <Button
-              v-if="isSegmentsView && !isLabelView && !isActiveView"
+              v-if="
+                isSegmentsView &&
+                !isLabelView &&
+                !isActiveView &&
+                canDeleteSegment
+              "
               icon="i-lucide-trash"
               color="slate"
               size="sm"

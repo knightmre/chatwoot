@@ -16,6 +16,6 @@ class CustomFilterPolicy < ApplicationPolicy
   end
 
   def destroy?
-    @account_user.administrator? || @account_user.agent?
+    @account_user.administrator?
   end
 end

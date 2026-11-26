@@ -11,6 +11,11 @@ vi.mock('dashboard/composables/useUISettings', async () => {
   };
 });
 
+// Deleting a folder is limited to administrators.
+vi.mock('dashboard/composables/usePolicy', () => ({
+  usePolicy: () => ({ checkPermissions: () => true }),
+}));
+
 const mountHeader = props =>
   shallowMount(ChatListHeader, {
     props: {

@@ -28,17 +28,20 @@ module Filters::CustomAttributeFilterHelper
     query_operator = query_hash[:query_operator]
     table_name = attribute_model == 'conversation_attribute' ? 'conversations' : 'contacts'
 
-    query = if attribute_data_type == 'text'
-              ActiveRecord::Base.sanitize_sql_array(
-                ["LOWER(#{table_name}.custom_attributes ->> ?)::#{attribute_data_type} #{filter_operator_value} #{query_operator} ", @attribute_key]
-              )
-            else
-              ActiveRecord::Base.sanitize_sql_array(
-                ["(#{table_name}.custom_attributes ->> ?)::#{attribute_data_type} #{filter_operator_value} #{query_operator} ", @attribute_key]
-              )
-            end
+    condition = if attribute_data_type == 'text'
+                  ActiveRecord::Base.sanitize_sql_array(
+                    ["LOWER(#{table_name}.custom_attributes ->> ?)::#{attribute_data_type} #{filter_operator_value}", @attribute_key]
+                  )
+                else
+                  ActiveRecord::Base.sanitize_sql_array(
+                    ["(#{table_name}.custom_attributes ->> ?)::#{attribute_data_type} #{filter_operator_value}", @attribute_key]
+                  )
+                end
 
-    query + not_in_custom_attr_query(table_name, query_hash, attribute_data_type)
+    condition += not_in_custom_attr_query(table_name, query_hash, attribute_data_type)
+    condition = "(#{condition})" if query_hash[:filter_operator] == 'not_equal_to'
+    # Automation rules concatenate these fragments as they are, so keep the trailing space.
+    "#{condition} #{query_operator} "
   end
 
   def validate_numeric_filter_operator!(filter_operator)
@@ -51,7 +54,7 @@ module Filters::CustomAttributeFilterHelper
   def validate_custom_attribute_values!(query_hash)
     return unless @attribute_data_type.in?(%w[date numeric])
     return if query_hash[:filter_operator].in?(%w[is_present is_not_present])
-    return if @attribute_data_type == 'date' && query_hash[:filter_operator] == 'days_before'
+    return if @attribute_data_type == 'date' && Filters::DateFilterHelper::RELATIVE_DAYS_OPERATORS.key?(query_hash[:filter_operator])
 
     Array(query_hash[:values]).each do |value|
       coerce_lt_gt_value(value, @attribute_data_type, @attribute_key)
@@ -70,7 +73,7 @@ module Filters::CustomAttributeFilterHelper
     return '' unless query_hash[:filter_operator] == 'not_equal_to'
 
     ActiveRecord::Base.sanitize_sql_array(
-      [" OR (#{table_name}.custom_attributes ->> ?)::#{attribute_data_type} IS NULL ", @attribute_key]
+      [" OR (#{table_name}.custom_attributes ->> ?)::#{attribute_data_type} IS NULL", @attribute_key]
     )
   end
 end
